@@ -1,0 +1,137 @@
+import pygame
+import sys
+
+# Initialisation de Pygame
+pygame.init()
+
+# Couleurs
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+BLUE = (0, 0, 255)
+
+# Dimensions de la fenêtre
+SCREEN_WIDTH = 600
+SCREEN_HEIGHT = 600
+LINE_WIDTH = 15
+
+# Définition des dimensions de la grille
+GRID_SIZE = 3
+CELL_SIZE = SCREEN_WIDTH // GRID_SIZE
+
+# Initialisation de la fenêtre
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption('Morpion')
+
+# Polices
+font = pygame.font.SysFont(None, 75)
+
+# Initialisation de la grille
+board = [["" for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
+current_player = "X"
+
+# Fonction pour dessiner la grille
+def draw_grid():
+    screen.fill(WHITE)
+    for x in range(1, GRID_SIZE):
+        pygame.draw.line(screen, BLACK, (x * CELL_SIZE, 0), (x * CELL_SIZE, SCREEN_HEIGHT), LINE_WIDTH)
+        pygame.draw.line(screen, BLACK, (0, x * CELL_SIZE), (SCREEN_WIDTH, x * CELL_SIZE), LINE_WIDTH)
+
+# Fonction pour dessiner les X et O
+def draw_marks():
+    for row in range(GRID_SIZE):
+        for col in range(GRID_SIZE):
+            if board[row][col] == "X":
+                draw_x(row, col)
+            elif board[row][col] == "O":
+                draw_o(row, col)
+
+# Fonction pour dessiner un X
+def draw_x(row, col):
+    start_pos = (col * CELL_SIZE + 50, row * CELL_SIZE + 50)
+    end_pos = ((col + 1) * CELL_SIZE - 50, (row + 1) * CELL_SIZE - 50)
+    pygame.draw.line(screen, RED, start_pos, end_pos, LINE_WIDTH)
+
+    start_pos = (col * CELL_SIZE + 50, (row + 1) * CELL_SIZE - 50)
+    end_pos = ((col + 1) * CELL_SIZE - 50, row * CELL_SIZE + 50)
+    pygame.draw.line(screen, RED, start_pos, end_pos, LINE_WIDTH)
+
+# Fonction pour dessiner un O
+def draw_o(row, col):
+    center = (col * CELL_SIZE + CELL_SIZE // 2, row * CELL_SIZE + CELL_SIZE // 2)
+    pygame.draw.circle(screen, BLUE, center, CELL_SIZE // 2 - 50, LINE_WIDTH)
+
+# Fonction pour vérifier s'il y a un gagnant
+def check_winner():
+    for row in range(GRID_SIZE):
+        if board[row][0] == board[row][1] == board[row][2] != "":
+            return board[row][0]
+
+    for col in range(GRID_SIZE):
+        if board[0][col] == board[1][col] == board[2][col] != "":
+            return board[0][col]
+
+    if board[0][0] == board[1][1] == board[2][2] != "":
+        return board[0][0]
+
+    if board[0][2] == board[1][1] == board[2][0] != "":
+        return board[0][2]
+
+    return None
+
+# Fonction pour vérifier si le plateau est plein (égalité)
+def check_draw():
+    for row in board:
+        if "" in row:
+            return False
+    return True
+
+# Fonction principale de jeu
+def game_loop():
+    global current_player
+    game_over = False
+    winner = None
+
+    while True:
+        draw_grid()
+        draw_marks()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.MOUSEBUTTONDOWN and not game_over:
+                mouseX, mouseY = pygame.mouse.get_pos()
+                clicked_row = mouseY // CELL_SIZE
+                clicked_col = mouseX // CELL_SIZE
+
+                if board[clicked_row][clicked_col] == "":
+                    board[clicked_row][clicked_col] = current_player
+                    winner = check_winner()
+                    if winner or check_draw():
+                        game_over = True
+                    else:
+                        current_player = "O" if current_player == "X" else "X"
+
+        if game_over:
+            if winner:
+                text = font.render(f"{winner} a gagné!", True, BLACK)
+            else:
+                text = font.render("Match nul!", True, BLACK)
+            screen.fill(WHITE)
+            screen.blit(text, (SCREEN_WIDTH // 6, SCREEN_HEIGHT // 3))
+            pygame.display.update()
+            pygame.time.wait(3000)
+            reset_game()
+
+        pygame.display.update()
+
+# Fonction pour réinitialiser le jeu
+def reset_game():
+    global board, current_player
+    board = [["" for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
+    current_player = "X"
+    game_loop()
+
+# Démarrer le jeu
+game_loop()
