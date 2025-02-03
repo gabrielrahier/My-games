@@ -1,0 +1,136 @@
+import pygame
+import random
+
+# Initialisation de pygame
+pygame.init()
+
+# Définition des couleurs
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+
+# Dimensions de la fenêtre
+SCREEN_WIDTH = 800
+SCREEN_HEIGHT = 600
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption("Jeu d'évitement avec score, difficulté croissante et pause")
+
+# Police pour afficher le score
+font = pygame.font.SysFont(None, 36)
+
+# Classe pour le joueur
+class Player(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = pygame.Surface((50, 50))
+        self.image.fill(RED)
+        self.rect = self.image.get_rect()
+        self.rect.centerx = SCREEN_WIDTH // 2
+        self.rect.bottom = SCREEN_HEIGHT - 10
+
+    def update(self):
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LEFT]:
+            self.rect.x -= 5
+        if keys[pygame.K_RIGHT]:
+            self.rect.x += 5
+        # Empêcher le joueur de sortir des limites de l'écran
+        if self.rect.left < 0:
+            self.rect.left = 0
+        if self.rect.right > SCREEN_WIDTH:
+            self.rect.right = SCREEN_WIDTH
+
+# Classe pour les obstacles
+class Obstacle(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = pygame.Surface((50, 50))
+        self.image.fill(BLACK)
+        self.rect = self.image.get_rect()
+        self.rect.x = random.randint(0, SCREEN_WIDTH - self.rect.width)
+        self.rect.y = random.randint(-150, -50)
+        self.speed_y = random.randint(5, 10)
+
+    def update(self):
+        self.rect.y += self.speed_y
+        if self.rect.top > SCREEN_HEIGHT:
+            self.rect.x = random.randint(0, SCREEN_WIDTH - self.rect.width)
+            self.rect.y = random.randint(-150, -50)
+            # Augmente la vitesse des obstacles à chaque passage
+            self.speed_y = random.randint(5 + difficulty_level, 10 + difficulty_level)
+            # Augmente le score lorsque l'obstacle est évité
+            global score
+            score += 1
+
+# Fonction pour afficher le score
+def draw_score(surface, score):
+    score_text = font.render(f"Score: {score}", True, BLACK)
+    surface.blit(score_text, (10, 10))
+
+# Initialisation des sprites
+all_sprites = pygame.sprite.Group()
+obstacles = pygame.sprite.Group()
+
+player = Player()
+all_sprites.add(player)
+
+for i in range(8):
+    obstacle = Obstacle()
+    all_sprites.add(obstacle)
+    obstacles.add(obstacle)
+
+# Initialisation du score, du niveau de difficulté, et de l'état de pause
+score = 0
+difficulty_level = 0
+paused = False  # Nouveau: état de pause
+
+# Boucle principale du jeu
+clock = pygame.time.Clock()
+running = True
+while running:
+    # Gestion des événements
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        # Vérifier si la touche "espace" est pressée pour mettre en pause
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE:
+                paused = not paused  # Alterner l'état de pause
+
+    if not paused:  # Mettre à jour les sprites et vérifier les collisions seulement si le jeu n'est pas en pause
+        # Mise à jour des sprites
+        all_sprites.update()
+
+        # Vérifier les collisions
+        if pygame.sprite.spritecollideany(player, obstacles):
+            print(f"Collision! Game Over. Score final: {score}")
+            running = False
+
+        # Augmenter la difficulté tous les 50 points
+        if score % 50 == 0 and score != 0:
+            difficulty_level += 1
+            print(f"Augmentation de la difficulté ! Niveau : {difficulty_level}")
+
+            # Pour éviter d'augmenter la difficulté plusieurs fois pour le même score, on ajuste temporairement le score
+            score += 1  # Petite astuce pour éviter une nouvelle augmentation de difficulté immédiate
+
+    # Dessiner tout
+    screen.fill(WHITE)
+    all_sprites.draw(screen)
+
+    # Afficher le score
+    draw_score(screen, score)
+
+    # Afficher le texte "Pause" si le jeu est en pause
+    if paused:
+        pause_text = font.render("", True, RED)
+        screen.blit(pause_text, (SCREEN_WIDTH // 2 - 50, SCREEN_HEIGHT // 2))
+
+    # Rafraîchir l'écran
+    pygame.display.flip()
+
+    # Contrôler la cadence de la boucle
+    clock.tick(60)
+
+# Quitter pygame
+pygame.quit()
